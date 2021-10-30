@@ -1,0 +1,4 @@
+menuconfig LIBUKCARGO
+	bool "ukcargo: Cargo support on Unikraft"
+	select LIBUKRUST
+	default n

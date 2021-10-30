@@ -1,0 +1,76 @@
+#  SPDX-License-Identifier: BSD-3-Clause
+#
+#  lib-cargo Makefile.rules
+#
+#  Authors: Vlad-Andrei BADOIU <vlad_andrei.badoiu@upb.ro>
+#	    Dennis Kobert <dennis@kobert.dev>
+#
+#  Copyright (c) 2022, University Politehnica of Bucharest (UPB)
+#
+#  Redistribution and use in source and binary forms, with or without
+#  modification, are permitted provided that the following conditions
+#  are met:
+#
+#  1. Redistributions of source code must retain the above copyright
+#     notice, this list of conditions and the following disclaimer.
+#  2. Redistributions in binary form must reproduce the above copyright
+#     notice, this list of conditions and the following disclaimer in the
+#     documentation and/or other materials provided with the distribution.
+#  3. Neither the name of the copyright holder nor the names of its
+#     contributors may be used to endorse or promote products derived from
+#     this software without specific prior written permission.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+#  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+#  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+#  ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+#  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+#  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+#  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+#  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+#  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+#  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+#  POSSIBILITY OF SUCH DAMAGE.
+#
+
+CARGO_PREFIX    = cargo
+CARGO_BUILD_DIR = $(BUILD_DIR)/$(CARGO_PREFIX)
+
+ifeq ("$(origin LLVM_TARGET_ARCH)", "undefined")
+CARGO  = cargo
+else
+CARGO  = cargo --target=$(CONFIG_LLVM_TARGET_ARCH)
+endif
+
+# vprefix_cargo $libname,$varname(s)
+vprefix_cargo = $(addprefix $(call uc,$(1))_,$(2))
+
+# Transform $libname to archive file name
+# cargotoalib $libname(s)
+define cargotoalib =
+$(addprefix $(CARGO_BUILD_DIR)/,$(join $(dir $(1)),\
+	$(addsuffix .a,$(addprefix lib,$(notdir $(1))))))
+endef
+
+# buildrule_cargo $libname,$source,$variant,$target,$extraflags
+# $$(RUSTCFLAGS) $$(RUSTCFLAGS-y) $$(RUSTCFLAGS_EXTRA)
+define buildrule_toml =
+$(call mk_sub_build_dir,$(CARGO_PREFIX))
+$(call cargotoalib, $(1)): $(2) $(4) 
+	$(call build_cmd,CARGO,$(1),$(2),\
+                UK_CINCLUDES="$$(CINCLUDES) $$(CINCLUDES-y) $$($(call vprefix_cargo,$(1),CINCLUDES)) $$($(call vprefix_cargo,$(1),CINCLUDES-y))" \
+                $(CARGO) $$($(call vprefix_cargo,$(1),RUSTCHANNEL)) $(RUSTC) \
+                        --manifest-path=$(2) \
+                        $$($(call vprefix_cargo,$(1),CARGOFLAGS)) $$($(call vprefix_cargo,$(1),CARGOFLAGS-y)) \
+                        -- \
+                        $$($(call vprefix_cargo,$(1),RUSTCFLAGS)) $$($(call vprefix_cargo,$(1),RUSTCFLAGS-y)) \
+                        $$($(call vprefix_src,$(1),$(2),$(3),FLAGS)) $$($(call vprefix_src,$(1),$(2),$(3),FLAGS-y)) \
+                        --cfg '__LIBNAME__="$(1)"' $(if $(3),--cfg '__VARIANT__="$(3)"') \
+                        $$(CARGOFLAGS) $$(CARGOFLAGS-y) \
+                        --emit link=$(call cargotoalib, $(1))\
+        )
+UK_SRCS-y += $(2)
+UK_ALIBS-y += $(call cargotoalib, $(1))
+$(eval $(call vprefix_cargo,$(1),CLEAN-y) += $(call build_clean,$(call cargotoalib, $(1))))
+.PHONY: $(4)
+endef
