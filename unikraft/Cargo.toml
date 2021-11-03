@@ -1,0 +1,11 @@
+[package]
+name = "unikraft"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+log-crate = ["log"]
+
+[dependencies]
+unikraft-sys = { path = "../unikraft-sys" }
+log = { version = "0.4", optional = true, features=["max_level_trace"]}
