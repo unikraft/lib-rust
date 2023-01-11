@@ -36,7 +36,7 @@
 $(eval $(call addlib_s,libukcargo,$(CONFIG_LIBUKCARGO)))
 
 CARGOFLAGS-y	+= -Cpanic=abort -Cembed-bitcode=n \
-		-Zbinary_dep_depinfo=y -Zsymbol-mangling-version=v0 \
+		-Zbinary_dep_depinfo=y -Csymbol-mangling-version=v0 \
 		-Cforce-unwind-tables=n -Ccodegen-units=1 \
 		-Dunsafe_op_in_unsafe_fn -Drust_2018_idioms
 
