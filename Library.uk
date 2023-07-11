@@ -1,0 +1,4 @@
+name        := "cargo"
+description := "Cargo support for Unikraft for Rust applications."
+homepage    := "https://doc.rust-lang.org/cargo/"
+license     := "BSD-3-License"
